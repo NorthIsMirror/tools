@@ -4,6 +4,8 @@ set THEDIR=%CD%
 echo Info: Run the script from cygwin "$HOME" folder
 echo Info: with elevated permissions (for mklink call)
 echo Info: Directories will be junctions, files - simlinks
+echo Info: MSys "$HOME" folder is a fine target as well,
+echo Info: but you must change "cyghome" to something else
 echo.
 
 if "%~1"=="" (
