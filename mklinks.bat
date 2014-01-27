@@ -37,6 +37,15 @@ if NOT EXIST %1 (
 
 echo.
 
+@rem Temp
+if NOT EXIST Temp (
+	mklink /J Temp "%TEMP%"
+) else (
+	echo Temp already existed
+)
+
+echo.
+
 @rem Files
 if NOT EXIST .gitconfig (
 	mklink .gitconfig C:\Users\%1\.gitconfig
