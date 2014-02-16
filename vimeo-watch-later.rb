@@ -68,9 +68,9 @@ videos.each do |oneVideo|
         end
 
         # Check if the video is already processed before
-        # Yeah, we are punching ruby's conciseness in its
-        # face by using a system() call
-        if system( "grep --color=always '" + url + "' " + url_list_path )
+        result = []
+        open( url_list_path ) { |f| result = f.grep(/#{url}/) }
+        if result.size() > 0
                 puts url + " (" + title[0..25] + ") is already processed, skipping!"
                 puts ""
                 next
