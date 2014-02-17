@@ -21,7 +21,6 @@ end
 
 CONSUMER_KEY=""
 CONSUMER_SECRET=""
-CALLBACK_URL=""
 USERNAME=""
 TOKEN=""
 TOKENSECRET=""
@@ -38,13 +37,13 @@ album = Vimeo::Advanced::Album.new( CONSUMER_KEY,
 
 watchLater = album.get_watch_later(
                         {:page => "1",
-                        :per_page =>"25",
+                        :per_page =>"40",
                         :full_response => "1",
                         :format => "json"})
 
 # For debugging
 File.open("/tmp/later-videos.json","w") do |f|
-    f.write( JSON.pretty_generate( watchLater ) )
+        f.write( JSON.pretty_generate( watchLater ) )
 end
 
 videos = watchLater["videos"]["video"];
@@ -83,14 +82,15 @@ videos.each do |oneVideo|
         filename = friendly_filename ( I18n.transliterate( title ) )
         filename = filename[0..30]
         dboxfile = dboxdir + "/" + filename + ".txt"
+
         File.open( ENV['HOME'] + "/" + dboxfile, "w") do |f|
-        f.write( url )
+                f.write( url )
         end
 
         # Remember that the video was being processed
         File.open( url_list_path, "a+" ) {|f|
-            f.write( url )
-            f.write( "\n" )
+                f.write( url )
+                f.write( "\n" )
         }
 
         # Optional remove - uncomment
