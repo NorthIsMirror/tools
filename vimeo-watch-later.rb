@@ -42,9 +42,13 @@ watchLater = album.get_watch_later(
                         :format => "json"})
 
 # For debugging
-File.open("/tmp/later-videos.json","w") do |f|
-        f.write( JSON.pretty_generate( watchLater ) )
-end
+#tmpfile = ENV['TEMP']
+#if tmpfile == nil or tmpfile == ""
+#       tmpfile = "/tmp"
+#end
+#File.open( tmpfile + "/vimeo-wlvideos.json", "w" ) do |f|
+#       f.write( JSON.pretty_generate( watchLater ) )
+#end
 
 videos = watchLater["videos"]["video"];
 
@@ -79,7 +83,7 @@ videos.each do |oneVideo|
         puts url
 
         # Store to the cloud file
-        filename = friendly_filename ( I18n.transliterate( title ) )
+        filename = friendly_filename ( title )
         filename = filename[0..30]
         dboxfile = dboxdir + "/" + filename + ".txt"
 
