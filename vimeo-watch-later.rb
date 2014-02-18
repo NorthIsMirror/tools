@@ -15,10 +15,12 @@ end
 # https://developer.vimeo.com/apps/new
 # So that you will obtain the necesarry data
 #
+# Windows is explicitly supported. You need to have "Dropbox"
+# folder in %USERPROFILE% or in $HOME if you use cygwin
+#
 
-CONSUMER_KEY=""
-CONSUMER_SECRET=""
-USERNAME=""
+CLIENT_ID=""
+CLIENT_SECRET=""
 TOKEN=""
 TOKENSECRET=""
 # The Dropbox path
@@ -27,8 +29,8 @@ dboxdir = "Dropbox/var/youtube-dl"
 
 url_list_path = ENV['HOME'] + "/" + dboxdir + "/vimeo_urls.lst"
 
-album = Vimeo::Advanced::Album.new( CONSUMER_KEY,
-                        CONSUMER_SECRET,
+album = Vimeo::Advanced::Album.new( CLIENT_ID,
+                        CLIENT_SECRET,
                         :token => TOKEN,
                         :secret => TOKENSECRET)
 
