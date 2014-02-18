@@ -2,9 +2,6 @@
 
 require 'vimeo'
 require 'json'
-require 'i18n'
-
-I18n.enforce_available_locales = false
 
 def friendly_filename(filename)
     filename.gsub(/[^\w\s_-]+/, '')
