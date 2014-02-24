@@ -119,7 +119,7 @@ function move_finished {
 
 move_finished
 
-ALREADY_RUNNING=`ps -ae | egrep '.*zsh.*auto-youtube-dl.*' | tr a-zA-Z ' ' | gawk '{ print $1 }'`
+ALREADY_RUNNING=`ps -ae | egrep '.*sh.*auto-youtube-dl.*' | tr a-zA-Z ' ' | gawk '{ print $1 }'`
 (( ALREADY_RUNNING = ALREADY_RUNNING + 0 ))
 if [[ $ALREADY_RUNNING -ge 3 ]]; then
     echo "To much downloads ($ALREADY_RUNNING), exiting"
@@ -137,7 +137,7 @@ for queue_file in $QUEUE_PATH/*.txt; do
 
     video_url=$(<$queue_file)
     mv -vf "$queue_file" "${queue_file%.txt}.used"
-    echo -e "\n$fg_bold[yellow]$queue_file :$reset_color $video_url\n"
+    echo -e "\n$queue_file : $video_url\n"
 
     while (( RETRY ++ < MAXRETRIES )); do
         if youtube-dl $NO_PROGRESS -f "18/22/35/34/h264-sd/h264-hd" --restrict-filenames -o "$VIDEO_DOWNLOAD_SUBDIR"/'%(title)s.%(ext)s' "$video_url"; then
