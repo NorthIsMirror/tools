@@ -15,9 +15,9 @@ BDIR2="$USERPROFILE"
 # existence of BDIR and BDIR2.
 #
 # You should need only to define:
-# - CLOUD_DIR
-# - QUEUE_SUBDIR
-# - VIDEO_DOWNLOAD_SUBDIR
+# - CLOUD_DIR (e.g. Dropbox, Google, in user directory)
+# - QUEUE_SUBDIR (in CLOUD_DIR)
+# - VIDEO_DOWNLOAD_SUBDIR (in user directory, inside Movies, Video, etc.)
 # - optional: MOVE_AFTER_DOWNLOAD_PATH
 #
 # The rest will be deduced and created in your Windows/Unix user directory
