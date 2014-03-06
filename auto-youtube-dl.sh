@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export PATH=$PATH:/usr/local/bin:/usr/local/sbin
+
 BDIR="$HOME"
 BDIR2="$USERPROFILE"
 
@@ -101,11 +103,11 @@ RETRY=0
 SLTIME=200
 
 function move_finished {
-    if [ ! -d "$MOVE_AFTER_DOWNLOAD_PATH" ]; then
+    if [ "$MOVE_AFTER_DOWNLOAD_PATH" = "" ]; then
         return
     fi
 
-    if [ "$MOVE_AFTER_DOWNLOAD_PATH" = "" ]; then
+    if [ ! -d "$MOVE_AFTER_DOWNLOAD_PATH" ]; then
         return
     fi
 
@@ -119,9 +121,9 @@ function move_finished {
 
 move_finished
 
-ALREADY_RUNNING=`ps -ae | egrep '.*sh.*auto-youtube-dl.*' | tr a-zA-Z ' ' | gawk '{ print $1 }'`
+ALREADY_RUNNING=`ps -ae | grep -v grep | egrep -c '.*sh.*-c.*auto-youtube-dl.*'`
 (( ALREADY_RUNNING = ALREADY_RUNNING + 0 ))
-if [[ $ALREADY_RUNNING -ge 3 ]]; then
+if [[ $ALREADY_RUNNING -gt 3 ]]; then
     echo "To much downloads ($ALREADY_RUNNING), exiting"
     exit
 fi
@@ -130,6 +132,8 @@ NO_PROGRESS="--no-progress"
 if [ "$1" = "-v" ]; then
     NO_PROGRESS=""
 fi
+
+cd "$OUTPUT_VIDEO_PATH"
 
 # Iterate over txt fils inside $QUEUE_PATH
 for queue_file in $QUEUE_PATH/*.txt; do
@@ -140,7 +144,8 @@ for queue_file in $QUEUE_PATH/*.txt; do
     echo -e "\n$queue_file : $video_url\n"
 
     while (( RETRY ++ < MAXRETRIES )); do
-        if youtube-dl $NO_PROGRESS -f "18/22/35/34/h264-sd/h264-hd" --restrict-filenames -o "$VIDEO_DOWNLOAD_SUBDIR"/'%(title)s.%(ext)s' "$video_url"; then
+        echo "(re-)Starting download with the command: " youtube-dl $NO_PROGRESS -f "18/22/35/34/h264-sd/h264-hd" --restrict-filenames -o "$OUTPUT_VIDEO_PATH"/'%(title)s.%(ext)s' "$video_url"
+        if youtube-dl $NO_PROGRESS -f "18/22/35/34/h264-sd/h264-hd" --restrict-filenames -o "$OUTPUT_VIDEO_PATH"/'%(title)s.%(ext)s' "$video_url"; then
             echo "Download succesfull"
             break
         else
