@@ -2,8 +2,19 @@
 
 export PATH=$PATH:/usr/local/bin:/usr/local/sbin
 
+# Base directories
 BDIR="$HOME"
 BDIR2="$USERPROFILE"
+
+#
+# The script will automatically download multiple videos from Youtube, Vimeo
+# and other sites supported by youtube-dl
+#
+# The queue is a Dropbox subdirectory, with text files, each containing the URL
+# of the video to download
+#
+# The download will restart many times, at least for 48 hours
+# 
 
 #
 # Much below is an approach to make you change name of directories
@@ -29,18 +40,12 @@ BDIR2="$USERPROFILE"
 # *_SUBDIR: relative to corresponding DIR
 # *_PATH: absolute path
 
-# As ever: searched for in $BDIR, then $BDIR2
-CLOUD_DIR="Dropbox"
-# Under CLOUD_DIR. Holds the .txt with the URL to download
-QUEUE_SUBDIR="var/youtube-dl"
+CLOUD_DIR="Dropbox"                 # as ever: searched for in $BDIR, then $BDIR2
+QUEUE_SUBDIR="var/youtube-dl"       # Under CLOUD_DIR. Holds the .txt with the URL to download
+VIDEO_DOCUMENTS_DIR="Movies"        # As ever: $BDIR/*, then $BDIR2/*
+VIDEO_DOCUMENTS_DIR2="Videos"       # (four combinations)
+VIDEO_DOWNLOAD_SUBDIR="youtube"     # Under $VIDEO_DOCUMENTS_DIR* (the first one found). Target download directory
 
-# As ever: $BDIR/*, then $BDIR2/*
-# (four combinations)
-VIDEO_DOCUMENTS_DIR="Movies"
-VIDEO_DOCUMENTS_DIR2="Videos"
-# Under $VIDEO_DOCUMENTS_DIR* (the first one found)
-# This is the target download directory
-VIDEO_DOWNLOAD_SUBDIR="youtube"
 
 # Move fully downloaded file into this path
 MOVE_AFTER_DOWNLOAD_PATH=""
@@ -114,8 +119,7 @@ function move_finished {
     cd $OUTPUT_VIDEO_PATH || return
 
     {
-        mv -vf *.mp4 "$MOVE_AFTER_DOWNLOAD_PATH"
-        mv -vf *.flv "$MOVE_AFTER_DOWNLOAD_PATH"
+        mv -vf *.mp4 *.flv "$MOVE_AFTER_DOWNLOAD_PATH"
     }
 }
 
