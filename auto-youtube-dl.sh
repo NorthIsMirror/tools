@@ -127,8 +127,35 @@ VIDEO_DOWNLOAD_SUBDIR="youtube"     # Under $VIDEO_DOCUMENTS_DIR* (the first one
 # Example crontab entry:
 # * * * * * /usr/local/bin/auto-youtube-dl.sh >> /var/auto-ydl.log 2>&1
 
+# 22        :        mp4        [720x1280]
+# 45        :        webm       [720x1280]
+#
+# 35        :        flv        [480x854]
+# 44        :        webm       [480x854]
+#
+# 37        :        mp4        [1080x1920]
+# 46        :        webm       [1080x1920]
+#
+# h264-hd
+# vp6-hd
+# 480p-600k
+# h264-sd
+# vp6-sd
+# 504x366
+# 0
+# high
+# flv
+# best
+#
+# last:
+# 34        :        flv        [360x640]
+# 18        :        mp4        [360x640]
+# 43        :        webm       [360x640]
+#
+# 
+
 SLEEP_TIME=50
-FORMATS="18/504x336/22/35/34/h264-sd/43/h264-hd/flv/vp6-sd/0/low/high"
+FORMATS="22/45/35/44/37/46/45/h264-hd/vp6-hd/480P-600k/h264-sd/vp6-sd/504x366/0/high/flv/best/34/18/43"
 OPTIONS=( --add-metadata --restrict-filenames --no-playlist --socket-timeout 60 --no-call-home )
 TITLE_DURATION_OPTIONS=( --get-title --get-duration --no-playlist --socket-timeout 60 --no-call-home )
 YDL_NAME_PATTERN='%(title)s.%(ext)s' # Used when explicit query of video's title fails
@@ -197,8 +224,8 @@ get_children_pids() {
 # If the queue file has changed, then requeue it again
 # and quit to restart the download
 check_for_update() {
-    [ ! -f "/tmp/ydlstart.$MAIN_PID" ] && return
-    queue_file="$(</tmp/ydlstart.$MAIN_PID)"
+    [ ! -f "/tmp/auto-ydlqfile.$MAIN_PID" ] && return
+    queue_file="$(</tmp/auto-ydlqfile.$MAIN_PID)"
     the_used_file="${queue_file%.txt}.used"
 
     NEW_FILE_CONTENTS="$(<$the_used_file)"
@@ -217,14 +244,14 @@ check_for_update() {
         [ "$YPID" -gt 100 ] && kill 2>/dev/null -15 "$YPID"
 
         sleep 3
-        mv -f "${queue_file%.txt}.used" "$queue_file"
+        mv -f "$the_used_file" "$queue_file"
         kill 2>/dev/null -15 "$MAIN_PID"
     fi
 }
 
 # Repeately restart the download after some time to wipe
 # out any stalls inside youtube-dl or on the network.
-trim_process() {
+background_trim_process() {
     while (( 1 )); do
         # Wait 5 seconds 20 times, checking for update of the .txt (now .used) file
         wait_repeats=20
@@ -267,7 +294,10 @@ cleanup() {
     done
 
     # Remove temporary files
-    rm -f /tmp/ydl.$MAIN_PID /tmp/ydlpid.$MAIN_PID /tmp/ydlstart.$MAIN_PID
+    # ydlpid holds youtube-dl actual pid so the background process can know its value
+    # auto-ydlqfile holds current queue file so the background process can perform the requeue
+    # ydlout is a file with video's title and duration (stored there by the separate youtube-dl call)
+    rm -f /tmp/now ydlout.$MAIN_PID /tmp/ydlpid.$MAIN_PID /tmp/auto-ydlqfile.$MAIN_PID
 }
 
 # Cleans up children processes, outputs message
@@ -370,7 +400,7 @@ move_finished
 
 ALREADY_RUNNING=`ps -ae | grep -v grep | egrep -c '/bin/bash.*n1auto-youtube-dl.*'`
 (( ALREADY_RUNNING = ALREADY_RUNNING - 1 ))
-if [[ $ALREADY_RUNNING -gt 5 ]]; then
+if [[ $ALREADY_RUNNING -gt 6 ]]; then
     # Are there any priority (a-...) files?
     files=`ls 2>/dev/null $QUEUE_PATH | grep 2>/dev/null '^a-[^ ]*.txt'`
     if [ -z "$files" ]; then
@@ -391,7 +421,7 @@ fi
 # Prepend the $FORMATS
 OPTIONS=( -f "$FORMATS" "${OPTIONS[@]}" )
 
-trim_process &
+background_trim_process &
 
 cd "$OUTPUT_VIDEO_PATH"
 
@@ -404,7 +434,7 @@ for queue_file in $QUEUE_PATH/*.txt; do
     { read -r video_url; read -r opts; read -r cmds; } <<<"$(<$queue_file)"
     mv -f "$queue_file" "${queue_file%.txt}.used"
 
-    echo "$queue_file" > "/tmp/ydlstart.$MAIN_PID"
+    echo "$queue_file" > "/tmp/auto-ydlqfile.$MAIN_PID"
 
     # Include MAIN_PID in the file (in 5th line)
     # Line after is video title and duration - empty
@@ -430,10 +460,10 @@ for queue_file in $QUEUE_PATH/*.txt; do
     # Get video's title and duration
     while (( TITLERETRY++ < TITLEMAXRETRIES )); do
         # Run youtube-dl in background so that main process can still receive signals
-        youtube-dl "${TITLE_DURATION_OPTIONS[@]}" "$video_url" > /tmp/ydl.$MAIN_PID &
+        youtube-dl "${TITLE_DURATION_OPTIONS[@]}" "$video_url" > /tmp/ydlout.$MAIN_PID &
         wait $!
-        { read -r vtitle; read -r vduration; } <<<"$(</tmp/ydl.$MAIN_PID)"
-        rm -f /tmp/ydl.$MAIN_PID
+        { read -r vtitle; read -r vduration; } <<<"$(</tmp/ydlout.$MAIN_PID)"
+        rm -f /tmp/ydlout.$MAIN_PID
 
         : "${vduration:=--:--}"
 
