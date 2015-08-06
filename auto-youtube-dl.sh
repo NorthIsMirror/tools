@@ -60,8 +60,8 @@ export _RST_ _RVS_ _BLD _DIM _UND _BlK _RVS _HID _BU C_BLACK C_RED C_GREEN C_YEL
 # Here is more information on available advanced functions
 # - second line in the .txt file can contain youtube-dl options (e.g. -r 100k)
 # - you can edit the text file (it will have *.used extension after the download starts)
-#   and change the options, and auto-youtube-dl will restart the download this works when
-#   there is the crontab entry for this script
+#   and change the options, and auto-youtube-dl will restart the download. This works
+#   when there is the crontab entry for this script
 # - on third line, you can put BASH commands; they will be executed ahead of the
 #   download (example: "sleep 120" to defer, "continue" to skip)
 # - on last line, auto-youtube-dl will put video's title and duration
@@ -72,16 +72,24 @@ export _RST_ _RVS_ _BLD _DIM _UND _BlK _RVS _HID _BU C_BLACK C_RED C_GREEN C_YEL
 # Example: .txt file can look like this:
 #
 # www.youtube.com/watch?v=Foo
-# sleep 120
 # -r 100k
-# An example title 1:09
+# sleep 120
+# ------
+# [finished]
+# 30204
+# A video's title
 #
-# Fourth line is the added one.
+# Lines after "------" are added ones (30204 is PID of auto-youtube-dl.sh).
 #
 
 #
 # Much below is an approach to make you change name of directories
-# instead of defining paths.
+# instead of defining paths. You probably don't need to change anything
+# about the queue, it will be at:
+# [user-directory]/Dropbox/var/youtube-dl/
+#
+# As for the download dir, it will be at:
+# [user-directory]/[Movies-or-Videos]/youtube/
 #
 # If you have your Dropbox (Google, etc.) directory in /usr/local/var/Dropbox
 # or similar fussy location, then you will know what to do anyway (hint: change
@@ -90,20 +98,14 @@ export _RST_ _RVS_ _BLD _DIM _UND _BlK _RVS _HID _BU C_BLACK C_RED C_GREEN C_YEL
 # The difficulty is Windows - Unix portability. This is the cause for
 # existence of BPATH and BPATH2.
 #
-# You should need only to define:
-# - CLOUD_DIR
-# - QUEUE_SUBDIR
-# - VIDEO_DOWNLOAD_SUBDIR
-# - optional: MOVE_AFTER_DOWNLOAD_PATH
-#
-# The rest will be deduced and created in your Windows/Unix user directory
+# MOVE_AFTER_DOWNLOAD_PATH is optional
 #
 # Check out the FORMATS variable, by default it is set to medium quality
 #
 
 # Types of variables:
 # *_DIR: relative to $HOME and then to %USERPROFILE%, i.e. to $BPATH, $BPATH2
-# *_SUBDIR: relative to corresponding DIR
+# *_SUBDIR: relative to corresponding *_DIR
 # *_PATH: absolute path
 
 # Base paths (unix - $HOME, windows - $USERPROFILE)
@@ -163,14 +165,13 @@ YDL_NAME_PATTERN='%(title)s.%(ext)s' # Used when explicit query of video's title
 # EXAMPLE OUTPUT of file:
 #
 # https://www.youtube.com/watch?v=_vK84lvwQwo
-# sleep 5
 # -r 10k
-# Atari Basic programming example 3:00
+# sleep 5
 #
 # :
 
 # ./auto-youtube-dl.sh
-# [pid: 57243] 2015-07-29 12:36:56 -------------------- example.txt sleep 5 -r 10k
+# [pid: 57243] 2015-07-29 12:36:56 -------------------- example.txt -r 10k sleep 5
 # [pid: 57243] 2015-07-29 12:37:03 `Atari Basic programming example' [3:00s] : _vK84lvwQwo
 # 
 # [pid: 57243] 2015-07-29 12:37:03 STARTING download of <<example.txt>> with the command: youtube-dl -r 10k -f 18/504x336/22/35/34/h264-sd/43/h264-hd/flv/vp6-sd/0/low/high --no-progress --add-metadata --restrict-filenames --no-playlist --socket-timeout 60 --no-call-home -o /home/foo/Movies/youtube/Atari_Basic_programming_example.%(ext)s https://www.youtube.com/watch?v=_vK84lvwQwo
@@ -221,30 +222,48 @@ get_children_pids() {
     ps -o ppid,pid -A | egrep '^ *'$1' ' | awk '{ print $2 }'
 }
 
+# Update the queue file locking it from check_for_update()
+update_queue_used_file() {
+    vurl="$1"
+    opts="$2"
+    cmds="$3"
+    status="$4"
+    pid="$5"
+    title="$6"
+    duration="$7"
+
+    while (( 1 )); do
+        # The queue file cannot be more recent than auto-ydlfile.$MAIN_PID
+        if mkdir /tmp/auto-ydllock.$MAIN_PID; then
+            echo -e "$vurl\\n$opts\\n$cmds\\n------\\n$status\\n$pid\\n$title $duration" > "$queue_used_file"
+            echo "$queue_txt_file" > "/tmp/auto-ydlqfile.$MAIN_PID"
+            rmdir /tmp/auto-ydllock.$MAIN_PID
+            break
+        fi
+        sleep 1
+    done
+}
+
 # If the queue file has changed, then requeue it again
 # and quit to restart the download
 check_for_update() {
     [ ! -f "/tmp/auto-ydlqfile.$MAIN_PID" ] && return
-    queue_file="$(</tmp/auto-ydlqfile.$MAIN_PID)"
-    the_used_file="${queue_file%.txt}.used"
 
-    NEW_FILE_CONTENTS="$(<$the_used_file)"
-    # Compare only user-provided fields (first three: url, options, commands)
-    NEW_FILE_CONTENTS="${NEW_FILE_CONTENTS%%------*}"
+    queue_txt_file="$(</tmp/auto-ydlqfile.$MAIN_PID)"
+    queue_used_file="${queue_txt_file%.txt}.used"
 
-    [ -z "$FILE_CONTENTS" ] && FILE_CONTENTS="$NEW_FILE_CONTENTS"
     # Queue file updated?
-    if [ "$FILE_CONTENTS" != "$NEW_FILE_CONTENTS" ]; then
-        FILE_CONTENTS="$NEW_FILE_CONTENTS"
-
+    # "older than" (-ot) means longer existing after write
+    # so checking if the queue file is written more recently
+    if [ "/tmp/auto-ydlqfile.$MAIN_PID" -ot "$queue_used_file" ]; then
         # Rename the queue file back to ".txt" extension and quit
-        echo -e "`mydate` ${C_YELLOW}Requeueing${_RST_} <<${CI_GREEN}`basename "$queue_file"`${_RST_}>>"
+        echo -e "`mydate` ${C_YELLOW}Requeueing${_RST_} <<${CI_GREEN}`basename "$queue_txt_file"`${_RST_}>>"
 
         YPID=$(echo "`cat 2>/dev/null /tmp/ydlpid.$MAIN_PID`" | sed -e 's/$/ -0/' | bc)
         [ "$YPID" -gt 100 ] && kill 2>/dev/null -15 "$YPID"
 
         sleep 3
-        mv -f "$the_used_file" "$queue_file"
+        mv -f "$queue_used_file" "$queue_txt_file"
         kill 2>/dev/null -15 "$MAIN_PID"
     fi
 }
@@ -256,7 +275,10 @@ background_trim_process() {
         # Wait 5 seconds 20 times, checking for update of the .txt (now .used) file
         wait_repeats=20
         while (( wait_repeats-- )); do
-            check_for_update
+            if mkdir /tmp/auto-ydllock.$MAIN_PID; then
+                check_for_update
+                rmdir /tmp/auto-ydllock.$MAIN_PID
+            fi
             sleep $(( SLEEP_TIME / 10 ))
         done
 
@@ -298,6 +320,7 @@ cleanup() {
     # auto-ydlqfile holds current queue file so the background process can perform the requeue
     # ydlout is a file with video's title and duration (stored there by the separate youtube-dl call)
     rm -f /tmp/now ydlout.$MAIN_PID /tmp/ydlpid.$MAIN_PID /tmp/auto-ydlqfile.$MAIN_PID
+    rmdir /tmp/auto-ydllock.$MAIN_PID
 }
 
 # Cleans up children processes, outputs message
@@ -426,23 +449,27 @@ background_trim_process &
 cd "$OUTPUT_VIDEO_PATH"
 
 # Iterate over txt fils inside $QUEUE_PATH
-for queue_file in $QUEUE_PATH/*.txt; do
+for queue_txt_file in $QUEUE_PATH/*.txt; do
     # Check if some other auto-youtube-dl instance already iterated further
     # TODO: Fix race conditions
-    [ -f $queue_file ] || break
+    [ -f $queue_txt_file ] || break
 
-    { read -r video_url; read -r opts; read -r cmds; } <<<"$(<$queue_file)"
-    mv -f "$queue_file" "${queue_file%.txt}.used"
+    queue_used_file="${queue_txt_file%.txt}.used"
 
-    echo "$queue_file" > "/tmp/auto-ydlqfile.$MAIN_PID"
+    { read -r video_url; read -r opts; read -r cmds; } <<<"$(<$queue_txt_file)"
+    mv -f "$queue_txt_file" "$queue_used_file"
+
+    echo "$queue_txt_file" > "/tmp/auto-ydlqfile.$MAIN_PID"
 
     # Include MAIN_PID in the file (in 5th line)
     # Line after is video title and duration - empty
     # The separator is to mark fields that are autogenerated by the script
-    echo -e "$video_url\\n$opts\\n$cmds\\n------\\n[-no status-]\\n$MAIN_PID\\n" > "${queue_file%.txt}.used"
+    #
+    # Modification 1/3 of the *.used file
+    update_queue_used_file "$video_url" "$opts" "$cmds" "[-no status-]" "$MAIN_PID" "" ""
 
-    filename=`basename "$queue_file"`
-    echo "`mydate` -------------------- $filename $cmds $opts"
+    filename=`basename "$queue_txt_file"`
+    echo "`mydate` -------------------- $filename $opts $cmds"
 
     # User wants to run some code?
     [ ! -z "$cmds" ] && eval "$cmds"
@@ -481,7 +508,9 @@ for queue_file in $QUEUE_PATH/*.txt; do
     TITLERETRY=0
 
     # Append video's title and duration to the queue file
-    echo -e "$video_url\\n$opts\\n$cmds\\n------\\n[-no status-]\\n$MAIN_PID\\n$vtitle $vduration" > "${queue_file%.txt}.used"
+    # Modification 2/3 of the *.used file
+    update_queue_used_file "$video_url" "$opts" "$cmds" "[-no status-]" "$MAIN_PID" "$vtitle" "$vduration"
+
 
     # Output a main message, emphasized by red color, containing title, duration and a video id
     urlid="${video_url##*/}"
@@ -509,7 +538,9 @@ for queue_file in $QUEUE_PATH/*.txt; do
             (( DOWNLOAD_TIME = (DOWNLOAD_TIME - START_TIME) / 60 ))
             echo -e "`mydate` ${C_YELLOW}Download of <<$filename>> successful"\
                     "(# of attempts: $RETRY, time: ${DOWNLOAD_TIME}m)$_RST_"
-            echo -e "$video_url\\n$opts\\n$cmds\\n------\\n[finished]\\n$MAINPID\\n$vtitle $vduration" > "${queue_file%.txt}.used"
+            # Modification 3/3 of the *.used file
+            update_queue_used_file "$video_url" "$opts" "$cmds" "[finished]" "$MAIN_PID" "$vtitle" "$vduration"
+
             RETRY=0
             break
         else
