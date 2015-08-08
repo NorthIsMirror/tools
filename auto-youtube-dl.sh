@@ -256,6 +256,7 @@ check_for_update() {
     # "older than" (-ot) means longer existing after write
     # so checking if the queue file is written more recently
     if [ "/tmp/auto-ydlqfile.$MAIN_PID" -ot "$queue_used_file" ]; then
+        sleep 3
         # Rename the queue file back to ".txt" extension and quit
         echo -e "`mydate` ${C_YELLOW}Requeueing${_RST_} <<${CI_GREEN}`basename "$queue_txt_file"`${_RST_}>>"
 
