@@ -321,7 +321,7 @@ cleanup() {
     # auto-ydlqfile holds current queue file so the background process can perform the requeue
     # ydlout is a file with video's title and duration (stored there by the separate youtube-dl call)
     rm -f /tmp/now ydlout.$MAIN_PID /tmp/ydlpid.$MAIN_PID /tmp/auto-ydlqfile.$MAIN_PID
-    rmdir /tmp/auto-ydllock.$MAIN_PID
+    rmdir 2>/dev/null /tmp/auto-ydllock.$MAIN_PID
 }
 
 # Cleans up children processes, outputs message
