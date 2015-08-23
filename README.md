@@ -16,7 +16,7 @@ Here is more information on available advanced functions:
   - second line in the queue .txt file can contain youtube-dl options (e.g. -r 100k),
   - you can edit the text file (it will have \*.used extension after the download starts)
   and change the options, and auto-youtube-dl will restart the download. This works
-  when there is the crontab entry for this script,
+  when there is crontab entry for this script,
   - on third line, you can put BASH commands; they will be executed ahead of the
   download (example: "sleep 120" to defer, "continue" to skip),
   - on last line, auto-youtube-dl will put video's title and duration,
