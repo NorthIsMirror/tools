@@ -129,6 +129,9 @@ VIDEO_DOWNLOAD_SUBDIR="youtube"     # Under $VIDEO_DOCUMENTS_DIR* (the first one
 # Example crontab entry:
 # * * * * * /usr/local/bin/auto-youtube-dl.sh >> /var/auto-ydl.log 2>&1
 
+# An alias that might help:
+# ydlstat='ps -axo etime,state,pid,command | egrep --color=always '\''(python.*youtube-dl)|(/n1auto-youtube-dl.sh)'\'' | grep -v egrep ; ls -1 ~/Dropbox/var/youtube-dl | grep -c .txt'
+
 # 22        :        mp4        [720x1280]
 # 45        :        webm       [720x1280]
 #
